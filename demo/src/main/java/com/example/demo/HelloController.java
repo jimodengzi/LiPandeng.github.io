@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class HelloController {
     @RequestMapping("/hi")
     public String index(){
-        return "hi sb";
+        return "hi springboot!";
     }
 }
