@@ -1,0 +1,380 @@
+Mybatis详解（一）实现增删改查
+
+ 
+mybatis介绍
+
+
+
+mybatis是一个应用于dao层框架（持久层框架）
+
+也是一个ORM（object relational mapping）框架（对象关系映射）,相比于hibernate，他是一个半自动的。
+
+优点：
+
+Mybatis优点
+
+让程序员只关注sql语句
+
+参数的设置，结果集的处理，框架自动生成
+
+简单易学，灵活，解除sql与程序代码的耦合，提供对象关系映射标签，提供xml标签
+
+jdbc的缺点
+
+代码重复（每次创建连接，获取执行sql语句的对象，执行sql语句，然后处理结果集，最后释放资源）
+
+处理结果集，工作比较复杂
+
+参数处理比较麻烦
+
+实现增删改查
+首先准备数据库
+
+数据库名字为mybatis
+
+数据表名为mbs
+
+
+
+id设置为自增
+
+创建项目
+
+创建一个实体类，实现get和set方法，以及toString方法
+
+
+public class User {
+    private Integer id;
+    private String name;
+    private String sex;
+    private String address;
+    private Integer balance;
+
+    public User() {
+    }
+
+    public User(Integer id, String name, String sex, String address, Integer balance) {
+        this.id = id;
+        this.name = name;
+        this.sex = sex;
+        this.address = address;
+        this.balance = balance;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getSex() {
+        return sex;
+    }
+
+    public void setSex(String sex) {
+        this.sex = sex;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public Integer getBalance() {
+        return balance;
+    }
+
+    public void setBalance(Integer balance) {
+        this.balance = balance;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", sex='" + sex + '\'' +
+                ", address='" + address + '\'' +
+                ", balance=" + balance +
+                '}';
+    }
+}
+
+导入mybatis所需要的jar包
+
+
+
+书写配置文件
+
+目录src下的根目录创建sqlMapConfig.xml文件和log4j.properties
+
+sqlMapConfig.xml配置文件
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+    <!--开发环境-->
+    <environments default="development">
+        <environment id="development">
+            <!--事务管理-->
+            <transactionManager type="JDBC"></transactionManager>
+            <!--连接池-->
+            <dataSource type="POOLED">
+                <property name="driver" value="com.mysql.jdbc.Driver"></property>
+                <property name="url" value="jdbc:mysql://localhost:3306/mybatis"></property>
+                <property name="username" value="root"></property>
+                <property name="password" value="1234"></property>
+            </dataSource>
+        </environment>
+    </environments>
+   <mappers>
+       <mapper resource="cn/hd/pojo/UserMapper.xml"></mapper>
+   </mappers>
+
+</configuration>
+
+sqlMapConfig:命名可以更改，位置任意，名字建议用sqlMapConfig位置放在src下
+
+Environments:表示sqlMapConfig的运行环境
+
+运行环境“数据库的基本信息，事务
+
+Mappers:表示数据源
+
+上面的黑体字是解释语言
+
+
+
+log4j.properties文件配置
+
+# Global logging configuration
+#在开发环境下日志级别设置为debug，生产环境下设置成info或error
+log4j.rootLogger=DEBUG, stdout
+# Console output...
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%5p [%t] - %m%n
+
+实体类同级目录的映射文件UserMapper.xml文件
+
+<mapper namespace="test">
+ 
+   <select id="findUserById" parameterType="int" resultType="cn.hd.pojo.User" >
+   SELECT * FROM mbs WHERE id =  #{id}
+   </select>
+
+</mapper>
+
+UserMapper.xml名字可以更改，位置任意
+
+命名建议User.xml(ibatis) UserMapper.xml(mybatis)
+
+建议命名为：类名+Mapper.xml
+
+书写sql语句
+
+Mapper namespace属性 区分不同表中查询的sql语句的名字冲突
+
+比如user表 findById   order表  findById名字冲突不识别，所以给不同的表的数据源添加一个前缀，对应的是namespace属性
+
+ <select id="findUserById" parameterType="int" resultType="cn.hd.pojo.User" >
+   SELECT * FROM mbs WHERE id =  #{id}
+   </select>
+id给当前的sql语句起一个识别id，parameterType参数类型
+
+resultType结果集封装的类型，#{id}占位符里面的名字任意
+
+蓝色部分为解释语言
+
+上面的配置完成后就是正式开始增删改查了
+
+通过id查找用户
+在UserMapper.xml书写sql语句
+
+在测试类中书写测试代码
+
+<select id="findUserById" parameterType="int" resultType="cn.hd.pojo.User" >
+SELECT * FROM mbs WHERE id =  #{id}
+</select>
+
+ 
+
+
+public class Demo {
+    @Test
+    public void fun() throws IOException {
+        //获取sqlMapConfig.xml文件流
+        InputStream in = Resources.getResourceAsStream("sqlMapConfig.xml");
+        //创建工厂添加sqlMapConfig.xml
+        SqlSessionFactory build = new SqlSessionFactoryBuilder().build(in);
+        //获得session
+        SqlSession sqlSession = build.openSession();
+        //执行语句
+        //selectOne("test.findUserById", 1)是usermap中的namespace的值和id名
+        User user = sqlSession.selectOne("test.findUserById", 1);
+           
+        System.out.println(user);
+        //释放资源
+        sqlSession.close();
+
+    }
+}
+
+结果为：
+
+
+
+ok没问题的
+
+通过名字name模糊查找用户
+跟上面的一样在UserMapper.xml文件中书写sql语句，测试类中书写测试代码
+
+<!--模糊查询-->
+<select id="findByName" parameterType="String" resultType="cn.hd.pojo.User">
+   SELECT * FROM  mbs WHERE name LIKE '%${value}%'
+</select>
+
+ 
+
+@Test
+public void fun1() throws IOException {
+
+    InputStream in = Resources.getResourceAsStream("sqlMapConfig.xml");
+
+    SqlSessionFactory build = new SqlSessionFactoryBuilder().build(in);
+
+    SqlSession sqlSession = build.openSession();
+
+    List<User>user  = sqlSession.selectList("test.findByName", "莫");
+    System.out.println(user);
+
+    sqlSession.close();
+
+}
+
+
+我查询的是带有name带有莫得数据，也是没问题的
+
+添加数据
+书写sql语句和测试代码的位置不多说直接看上面的，直接上代码
+
+
+<!--添加用户  如果参数是引用类型  占位符的赋值方式为ognl表达式的方式{属性名}-->
+<insert id="UserAdd" parameterType="cn.hd.pojo.User">
+   INSERT INTO mbs (id,name,sex,address,balance)VALUES(#{id},#{name},#{sex},#{address},#{balance})
+</insert>
+
+ 
+
+@Test
+public void fun2() throws IOException {
+    InputStream in = Resources.getResourceAsStream("sqlMapConfig.xml");
+    SqlSessionFactory build = new SqlSessionFactoryBuilder().build(in);
+    SqlSession sqlSession = build.openSession();
+    User user = new User();
+    user.setName("马云");
+    user.setSex("男");
+    user.setAddress("嘉兴");
+    user.setBalance(2000);
+    int insert = sqlSession.insert("test.UserAdd", user);
+    System.out.println(insert);
+    sqlSession.commit();
+    sqlSession.close();
+}
+
+ 
+
+是如果是增删改，必须提交事务，持久化到数据库
+
+
+
+
+
+返回的是受影响的行数，看下数据库
+
+
+
+数据库也添加上了，说明添加也是没问题的
+
+删除用户
+<!--删除用户-->
+<delete id="UserDelete" parameterType="cn.hd.pojo.User">
+   DELETE FROM mbs WHERE id=#{id}
+</delete>
+
+ 
+
+@Test
+public void fun3() throws IOException {
+    InputStream in = Resources.getResourceAsStream("sqlMapConfig.xml");
+    SqlSessionFactory build = new SqlSessionFactoryBuilder().build(in);
+    SqlSession sqlSession = build.openSession();
+    int delete = sqlSession.delete("test.UserDelete", 5);
+    sqlSession.commit();
+    System.out.println(delete);
+    sqlSession.close();
+}
+
+刚才添加的是马云，id为5，这次删除id为5的数据
+
+
+
+控制台没问题，看下数据库
+
+
+
+数据库也没有了，删除也成功了
+
+修改用户
+<!--修改用户-->
+<update id="UserUpdate" parameterType="cn.hd.pojo.User">
+   UPDATE mbs set name=#{name},sex=#{sex},address=#{address},balance=#{balance} WHERE id=#{id}
+</update>
+
+ 
+
+@Test
+public void fun4() throws IOException {
+    InputStream in = Resources.getResourceAsStream("sqlMapConfig.xml");
+    SqlSessionFactory build = new SqlSessionFactoryBuilder().build(in);
+    SqlSession sqlSession = build.openSession();
+    User user = new User();
+    user.setId(4);
+    user.setName("小欣");
+    user.setSex("女");
+    user.setAddress("鹤壁");
+    user.setBalance(5000);
+    int update = sqlSession.insert("test.UserUpdate", user);
+    sqlSession.commit();
+    System.out.println(update);
+    sqlSession.close();
+}
+
+
+
+
+
+控制台是成功的，看下数据库吧，数据库中id为4的名字肯定被修改了
+
+
+
+修改也是成功的，到此mybatis的增删改查就完成了
+————————————————
+版权声明：本文为CSDN博主「double_lifly」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/qq_41934990/java/article/details/80984060
